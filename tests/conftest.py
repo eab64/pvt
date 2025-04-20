@@ -3,18 +3,50 @@ import typing
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+import subprocess
 
 # from app import ioc
-from app.application import application
+from app.application import AppBuilder
+
+
+@pytest.fixture(scope="session")
+async def app_builder():
+    subprocess.run(["alembic", "upgrade", "head"], check=True)
+    
+    builder = AppBuilder()
+    await builder.init_async_resources()
+    yield builder
+    await builder.tear_down()
 
 
 @pytest.fixture()
-async def client() -> typing.AsyncIterator[AsyncClient]:
+async def client(app_builder) -> typing.AsyncIterator[AsyncClient]:
     async with AsyncClient(
-        transport=ASGITransport(app=application),  # type: ignore[arg-type]
+        transport=ASGITransport(app=app_builder.app),  # type: ignore[arg-type]
         base_url="http://test",
     ) as client:
         yield client
+
+
+@pytest.fixture(autouse=True)
+async def clean_database(app_builder):
+    async with app_builder._session_maker() as session:
+        yield
+        
+        result = await session.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'"))
+        tables = [row[0] for row in result]
+        
+        await session.execute(text("SET session_replication_role = 'replica'"))
+        
+        for table in tables:
+            if table != 'alembic_version':  # Не очищаем таблицу миграций
+                await session.execute(text(f"TRUNCATE TABLE {table} CASCADE"))
+        
+        await session.execute(text("SET session_replication_role = 'origin'"))
+        
+        await session.commit()
+
 
 #
 # @pytest.fixture(autouse=True)
