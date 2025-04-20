@@ -7,7 +7,7 @@ from app.settings import Settings
 if __name__ == "__main__":
     settings = Settings()
     granian.Granian(
-        target="app.application:application",
+        target="src.app.application:application",
         address="0.0.0.0",  # noqa: S104
         port=settings.app_port,
         interface=Interfaces.ASGI,

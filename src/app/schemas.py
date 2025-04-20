@@ -14,6 +14,7 @@ class Base(BaseModel):
 class User(Base):
     id: str
     name: str
+    balance: Decimal
 
 
 class UserCreate(Base):
@@ -40,3 +41,10 @@ class Transaction(TransactionBase):
 class UserBalance(Base):
     balance: Decimal
 # END REMOVE ME
+
+
+class BalanceHistory(Base):
+    id: int
+    user_id: str
+    balance: Decimal
+    created_at: datetime

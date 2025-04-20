@@ -5,7 +5,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get -y install gcc
 
 WORKDIR /app
 
-ARG poetryargs="--only main"
+ARG poetryargs=""
 ARG GID=1000
 ARG UID=1000
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -18,7 +18,6 @@ RUN addgroup --gid $GID --system app && \
     adduser --no-create-home --shell /bin/false --disabled-password --uid $UID --system --group app
 
 COPY poetry.lock pyproject.toml /app/
-
 
 RUN poetry config virtualenvs.create false && \
     poetry install -vvv ${poetryargs} --no-interaction --no-ansi --no-root
