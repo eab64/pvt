@@ -12,6 +12,9 @@ from app.api.base import get_payment_repo
 
 ROUTER: typing.Final = fastapi.APIRouter()
 
+@ROUTER.get("/")
+async def root():
+    return {"status": "OK", "message": "API работает!"}
 
 @ROUTER.post("/user/")
 async def create_user(
