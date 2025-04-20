@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "app"
-version = "0"
+version = "0.1.0"
 description = ""
 authors = [
     "Artur Shiriev <me@shiriev.ru>",
@@ -12,32 +12,32 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "3.12.*"
-fastapi = ">=0.76"
-pydantic-settings = "*"
+python = "^3.12"
+fastapi = "^0.110.0"
+pydantic-settings = "^2.1.0"
 granian = "*"
 #that-depends = "*"
 # database
-alembic = "*"
-psycopg2 = "*"
-sqlalchemy = "*"
+alembic = "^1.13.1"
+psycopg2-binary = "^2.9.9"
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.0"}
 asyncpg = "*"
 
 [tool.poetry.group.dev.dependencies]
-polyfactory = "*"
-httpx = "*"
-pytest = "*"
-pytest-cov = "*"
-pytest-asyncio = "*"
-ruff = "*"
-mypy = "*"
+polyfactory = "^2.15.0"
+httpx = "^0.27.0"
+pytest = "^8.0.0"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.23.5"
+ruff = "^0.3.0"
+mypy = "^1.8.0"
 asyncpg-stubs = "*"
 
 [tool.ruff]
 fix = true
 unsafe-fixes = true
-line-length = 120
-target-version = "py311"
+line-length = 100
+target-version = "py312"
 extend-exclude = ["bin"]
 
 [tool.ruff.lint]
@@ -67,11 +67,14 @@ isort.no-lines-before = ["standard-library", "local-folder"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+ignore_missing_imports = true
 pretty = true
 
 [tool.pytest.ini_options]
-addopts = "--cov=. --cov-report term-missing"
 asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=src/app --cov-report=term-missing"
 
 [tool.coverage.report]
 exclude_also = [
@@ -80,3 +83,7 @@ exclude_also = [
 
 [tool.coverage.run]
 concurrency = ["thread","greenlet"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
