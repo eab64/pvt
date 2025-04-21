@@ -1,27 +1,4 @@
 import pytest
-from httpx import AsyncClient
-from decimal import Decimal
-from datetime import datetime
-import asyncio
-import subprocess
-
-from app.application import AppBuilder
-
-
-@pytest.fixture
-async def app_builder():
-    subprocess.run(["alembic", "upgrade", "head"], check=True)
-    
-    builder = AppBuilder()
-    await builder.init_async_resources()
-    yield builder
-    await builder.tear_down()
-
-
-@pytest.fixture
-async def client(app_builder):
-    async with AsyncClient(app=app_builder.app, base_url="http://test") as client:
-        yield client
 
 
 @pytest.mark.asyncio
@@ -241,4 +218,51 @@ async def test_get_transaction(client):
     data = response.json()
     assert data["uid"] == "tx-8-unique"
     assert data["amount"] == "1000.0"
-    assert data["type"] == "DEPOSIT" 
+    assert data["type"] == "DEPOSIT"
+
+
+@pytest.mark.asyncio
+async def test_transaction_idempotency(client):
+    await client.post(
+        "/api/user/",
+        json={
+            "id": "test-user-idempotent",
+            "name": "Idempotent User"
+        }
+    )
+    
+    response1 = await client.put(
+        "/api/transaction/",
+        json={
+            "uid": "tx-idempotent-1",
+            "user_id": "test-user-idempotent",
+            "amount": "1000.0",
+            "created_at": "2023-01-01T01:00:00",
+            "type": "DEPOSIT"
+        }
+    )
+    assert response1.status_code == 200
+    data1 = response1.json()
+    
+    balance_response1 = await client.get("/api/user/test-user-idempotent/balance/")
+    assert balance_response1.json()["balance"] == "1000.0"
+    
+    response2 = await client.put(
+        "/api/transaction/",
+        json={
+            "uid": "tx-idempotent-1",  # тот же uid
+            "user_id": "test-user-idempotent",
+            "amount": "1000.0",
+            "created_at": "2023-01-01T01:00:00",
+            "type": "DEPOSIT"
+        }
+    )
+    assert response2.status_code == 200
+    data2 = response2.json()
+    
+    assert data1["uid"] == data2["uid"]
+    assert data1["amount"] == data2["amount"]
+    assert data1["type"] == data2["type"]
+    
+    balance_response2 = await client.get("/api/user/test-user-idempotent/balance/")
+    assert balance_response2.json()["balance"] == "1000.0"  # баланс тот же, не 2000.0 

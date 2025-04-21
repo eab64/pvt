@@ -27,6 +27,11 @@ services:
       - "5432:5432"
     environment:
       - POSTGRES_PASSWORD=password
+      - POSTGRES_MULTIPLE_DATABASES=test_db
+    volumes:
+      - ./docker-postgresql-multiple-databases.sh:/docker-entrypoint-initdb.d/docker-postgresql-multiple-databases.sh
+      - ./docker-entrypoint.sh:/docker-entrypoint.sh
+    entrypoint: ["/docker-entrypoint.sh"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 1s
