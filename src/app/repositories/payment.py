@@ -47,7 +47,6 @@ class PaymentRepository:
             if ts is None:
                 query = sa.select(User.balance).where(User.id == user_id)
             else:
-                # try to find last balance
                 query = sa.select(BalanceHistory.balance).where(
                     sa.and_(
                         BalanceHistory.user_id == user_id,
@@ -59,9 +58,27 @@ class PaymentRepository:
             ).scalar()
 
     async def add_transaction(self, data: schemas.TransactionAdd) -> Transaction:
+        async with self.db_session_maker() as session:
+            existing_transaction = (
+                await session.execute(
+                    sa.select(Transaction).where(Transaction.uid == data.uid)
+                )
+            ).scalar()
+            
+            if existing_transaction:
+                return existing_transaction
+                
         try:
             return await self._add_transaction(data)
         except IntegrityError:
+            async with self.db_session_maker() as session:
+                existing_transaction = (
+                    await session.execute(
+                        sa.select(Transaction).where(Transaction.uid == data.uid)
+                    )
+                ).scalar()
+                if existing_transaction:
+                    return existing_transaction
             raise PaymentError(f"Transaction with uid {data.uid} already exists")
 
     async def _add_transaction(self, data: schemas.TransactionAdd) -> Transaction:
@@ -88,14 +105,12 @@ class PaymentRepository:
             )
             session.add(transaction)
 
-            # Обновляем баланс пользователя
             await session.execute(
                 sa.update(User)
                 .where(User.id == data.user_id)
                 .values(balance=new_balance)
             )
 
-            # updating history
             balance_history = BalanceHistory(
                 user_id=data.user_id,
                 balance=new_balance,
